@@ -5,6 +5,7 @@ if [ -d "fastText" ]; then
 else
   pip install --user --upgrade pip
   pip install --user pybind11
+  pip install --user torch
   git clone https://github.com/facebookresearch/fastText.git
   cd fastText
   pip install --user .

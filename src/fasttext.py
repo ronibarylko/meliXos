@@ -3,6 +3,11 @@ import sys
 import os
 import argparse
 
+'''
+No hay mucha magia (o al revés: hay demasiada).
+Usamos la librería de fasttext para entrenar nuestro modelo, y luego appendeamos las predicciones con el valor __label__ pues esa es la salida esperada
+'''
+
 def train_and_test():
     model = train(args.train_data)
     print(test(model, args.test_data))
