@@ -109,7 +109,6 @@ venv.bak/
 snli_1.0_{train,dev}_gold_labels.csv
 sample.csv
 read_data.py
-generate_answer.py
 snli_1.0_{train,dev,test}_filtered.jsonl
 eci2019nlp*
 *.txt
