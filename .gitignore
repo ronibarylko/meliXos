@@ -26,6 +26,7 @@ wheels/
 *.egg
 MANIFEST
 *.csv
+eci2019-nlp
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

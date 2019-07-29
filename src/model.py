@@ -39,7 +39,7 @@ def get_sentence(line):
 ### Función que toma un jsonl y agrega las palabras a mi mapa de word_to_integer
 def add_words_to_map(sentences, word_to_ix):
     for sentence in sentences:
-        for word in sentence:
+        for word in sentence.split():
             if word not in word_to_ix:
                 word_to_ix[word] = len(word_to_ix)
     return word_to_ix
@@ -58,7 +58,7 @@ def create_map(txt_list):
 # Función que crea un vector contando la cantidad de apariciones de las palabras en una oración.
 def make_bow_vector(sentence, word_to_ix):
     vec = torch.zeros(len(word_to_ix)) # Vector de ceros
-    for word in sentence:
+    for word in sentence.split():
         vec[word_to_ix[word]] += 1 # Por cada aparición de una palabra, le sumo uno
     return vec.view(1, -1) # Vector de tamaño 1 x n, donde n es inferido por el tamaño de palabras
 
@@ -70,7 +70,6 @@ def make_target(label, label_to_ix):
 ### Defino la cantidad de palabras y la cantidad de labels
 label_to_ix = { "neutral": 0, "contradiction": 1, "entailment": 2 }
 word_to_ix = create_map([DEV_SENTENCES, TRAIN_SENTENCES, TEST_SENTENCES])
-
 VOCAB_SIZE = len(word_to_ix)
 NUM_LABELS = len(label_to_ix)
 
@@ -111,4 +110,4 @@ test_data = get_data(DEV_DATA)
 for instance, label in test_data:
     bow_vec = autograd.Variable(make_bow_vector(instance, word_to_ix))
     log_probs = model(bow_vec)
-    print (log_probs.exp(), label)
+    print(log_probs.exp(), label)
