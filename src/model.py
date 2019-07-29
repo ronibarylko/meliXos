@@ -66,6 +66,12 @@ def make_bow_vector(sentence, word_to_ix):
 def make_target(label, label_to_ix):
     return torch.LongTensor([label_to_ix[label]])
 
+def get_label_by_item(item):
+    for label, value in label_to_ix.items():
+        if(value == item):
+            return label
+    return None
+
 ''' Creación del modelo '''
 ### Defino la cantidad de palabras y la cantidad de labels
 label_to_ix = { "neutral": 0, "contradiction": 1, "entailment": 2 }
@@ -83,8 +89,9 @@ optimizer = optim.SGD(model.parameters(), lr=0.1)
 # 100 is much bigger than on a real data set, but real datasets have more than
 # two instances.  Usually, somewhere between 5 and 30 epochs is reasonable (NOTA DE MARISCO: tarda algunos minutos cada vuelta).
 data = get_data(TRAIN_DATA)
-for epoch in range(1):
+for epoch in range(10):
     running_loss = 0.0
+    i = 0
     for instance, label in data:
         # Step 1. Remember that Pytorch accumulates gradients.  We need to clear them out
         # before each instance
@@ -105,12 +112,11 @@ for epoch in range(1):
         loss = loss_function(log_probs, target)
         loss.backward()
         optimizer.step()
-
-         # print statistics
+        # print statistics
+        i += 1
         running_loss += loss.item()
-        if i % 2000 == 1999:    #print every 2000 mini-batches
-            print('[%d, %5d] loss: %.3f' %
-                  (epoch + 1, i + 1, running_loss / 2000))
+        if i % 200000 == 199999:# print every 200000 mini-batches
+            print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 200000))
             running_loss = 0.0
 
 '''Predicción'''
@@ -121,7 +127,7 @@ for instance, label in test_data:
     bow_vec = autograd.Variable(make_bow_vector(instance, word_to_ix))
     log_probs = model(bow_vec)
     _, predicted = torch.max(log_probs, 1)
-    if(label_to_ix[predicted.item()] == label):
+    if(get_label_by_item(predicted.item()) == label):
         ok += 1
     counter += 1
-print("Resultado: {} ".format(counter/ok))
+print("Resultado: {} ".format(((100*ok)/counter)/100))
