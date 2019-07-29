@@ -84,6 +84,7 @@ optimizer = optim.SGD(model.parameters(), lr=0.1)
 # two instances.  Usually, somewhere between 5 and 30 epochs is reasonable (NOTA DE MARISCO: tarda algunos minutos cada vuelta).
 data = get_data(TRAIN_DATA)
 for epoch in range(1):
+    running_loss = 0.0
     for instance, label in data:
         # Step 1. Remember that Pytorch accumulates gradients.  We need to clear them out
         # before each instance
@@ -105,9 +106,22 @@ for epoch in range(1):
         loss.backward()
         optimizer.step()
 
+         # print statistics
+        running_loss += loss.item()
+        if i % 2000 == 1999:    #print every 2000 mini-batches
+            print('[%d, %5d] loss: %.3f' %
+                  (epoch + 1, i + 1, running_loss / 2000))
+            running_loss = 0.0
+
 '''Predicción'''
 test_data = get_data(DEV_DATA)
+counter = 0
+ok = 0
 for instance, label in test_data:
     bow_vec = autograd.Variable(make_bow_vector(instance, word_to_ix))
     log_probs = model(bow_vec)
-    print(log_probs.exp(), label)
+    _, predicted = torch.max(log_probs, 1)
+    if(label_to_ix[predicted.item()] == label):
+        ok += 1
+    counter += 1
+print("Resultado: {} ".format(counter/ok))
