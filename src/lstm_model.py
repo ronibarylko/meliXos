@@ -97,7 +97,7 @@ def prepare_sequence(seq, to_ix):
 # 100 is much bigger than on a real data set, but real datasets have more than
 # two instances.  Usually, somewhere between 5 and 30 epochs is reasonable (NOTA DE MARISCO: tarda algunos minutos cada vuelta).
 data = get_data(TRAIN_DATA)
-for epoch in range(10):
+for epoch in range(3):
     running_loss = 0.0
     i = 0
     for instance, label in data:
@@ -110,8 +110,7 @@ for epoch in range(10):
         # as an integer.  For example, if the target is SPANISH, then we wrap the integer
         # 0.  The loss function then knows that the 0th element of the log probabilities is
         # the log probability corresponding to SPANISH
-        boke = instance.split()
-        bow_vec = prepare_sequence(boke, word_to_ix)
+        bow_vec = prepare_sequence(instance.split(), word_to_ix)
         target = make_target(label, label_to_ix)
 
         # Step 3. Run our forward pass.
@@ -125,8 +124,8 @@ for epoch in range(10):
         # print statistics
         i += 1
         running_loss += loss.item()
-        if i % 2000 == 1999:# print every 200000 mini-batches
-            print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 2000))
+        if i % 20000 == 19999:# print every 200000 mini-batches
+            print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 20000))
             running_loss = 0.0
 
 '''Predicción'''
@@ -134,7 +133,7 @@ test_data = get_data(DEV_DATA)
 counter = 0
 ok = 0
 for instance, label in test_data:
-    bow_vec = autograd.Variable(make_bow_vector(instance, word_to_ix))
+    bow_vec = prepare_sequence(instance.split(), word_to_ix)
     log_probs = model(bow_vec)
     _, predicted = torch.max(log_probs, 1)
     if(get_label_by_item(predicted.item()) == label):
