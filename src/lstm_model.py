@@ -104,6 +104,7 @@ for epoch in range(10):
         # Step 1. Remember that Pytorch accumulates gradients.  We need to clear them out
         # before each instance
         model.zero_grad()
+        model.hidden = model.init_hidden()
 
         # Step 2. Make our BOW vector and also we must wrap the target in a Variable
         # as an integer.  For example, if the target is SPANISH, then we wrap the integer
