@@ -8,7 +8,7 @@ mv data.txt train.txt
 python3 reader.py eci2019nlp/snli_1.0_dev_filtered.jsonl eci2019nlp/snli_1.0_dev_gold_labels.csv
 echo -e "${RED}Dev data parsed correctly${NOCOLOR}"
 mv data.txt dev.txt
-python3 fasttext.py train.txt dev.txt 'test'
+python3 fasttext_model.py train.txt dev.txt 'test'
 echo -e "${RED}Result was produced correctly${NOCOLOR}"
 rm *.txt
 echo -e "${RED}Temporary files removed${NOCOLOR}"
