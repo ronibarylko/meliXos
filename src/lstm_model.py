@@ -3,7 +3,10 @@ import torch.autograd as autograd
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+import numpy as np
 from lstm_classifier import LSTMClassifier
+from torch.utils.data import DataLoader, TensorDataset
+from custom_dataset import CustomDataset
 
 '''
 Modelo cheto, vamos por ti
@@ -19,21 +22,23 @@ TRAIN_DATA = "train_data.txt"
 
 '''Funciones'''
 # Función que levanta el archivo data y lo transforma en una lista de (sentence, label)
-def get_data(data):
-    data_list = []
+def get_data_splitted(data):
+    instances = []
+    labels = []
     with open(data, 'r') as sentences:
         for line in sentences:
-            data_list.append((get_sentence(line), get_label(line)))
-    return data_list
+            instances.append(get_sentence_splitted(line))
+            labels.append(get_label(line))
+    return instances, labels
 
 def get_label(line):
     return line.split()[0].replace('__label__', '')
 
-def get_sentence(line):
+def get_sentence_splitted(line):
     line_split = line.split();
-    res = "";
-    for val in range(1, len(line.split())):
-        res += line_split[val] + " ";
+    res = []
+    for val in range(1, len(line_split)):
+        res.append(line_split[val])
     return res;
 
 ### Función que toma un jsonl y agrega las palabras a mi mapa de word_to_integer
@@ -64,7 +69,7 @@ def make_bow_vector(sentence, word_to_ix):
 
 # Función que wrappea la variable en un tensor. Básicamente, le pasas la lista de labels y tu label en particular, y te devuelve un tensor con el valor 0, 1 ó 2 adentro.
 def make_target(label, label_to_ix):
-    return torch.LongTensor([label_to_ix[label]])
+    return label_to_ix[label]
 
 def get_label_by_item(item):
     for label, value in label_to_ix.items():
@@ -78,58 +83,90 @@ label_to_ix = { "neutral": 0, "contradiction": 1, "entailment": 2 }
 word_to_ix = create_map([DEV_SENTENCES, TRAIN_SENTENCES, TEST_SENTENCES])
 VOCAB_SIZE = len(word_to_ix)
 NUM_LABELS = len(label_to_ix)
-EMBEDDING_DIM = 6
-HIDDEN_DIM = 6
+EMBEDDING_DIM = 512
+HIDDEN_DIM = 264
+BATCH_SIZE = 200
 
 # Creo mi modelo, defino la loss function, y la función de optimización
-model = LSTMClassifier(EMBEDDING_DIM, HIDDEN_DIM, VOCAB_SIZE, NUM_LABELS)
+model = LSTMClassifier(EMBEDDING_DIM, HIDDEN_DIM, VOCAB_SIZE, NUM_LABELS, BATCH_SIZE)
 loss_function = nn.NLLLoss()
 optimizer = optim.SGD(model.parameters(), lr=0.1)
 
 # TODO mover esto de aca
 def prepare_sequence(seq, to_ix):
     idxs = list(map(lambda w: to_ix[w], seq))
-    tensor = torch.LongTensor(idxs)
-    return autograd.Variable(tensor)
+    return idxs
+
+def get_tensor_data(data_inst, data_lab, word_to_ix, label_to_ix):
+    instances = []
+    labels = []
+    for instance, label in zip(data_inst, data_lab):
+        instances.append(prepare_sequence(instance, word_to_ix))
+        labels.append(make_target(label, label_to_ix))
+    return instances, labels
 
 '''Entrenamiento'''
 # Usually you want to pass over the training data several times.
 # 100 is much bigger than on a real data set, but real datasets have more than
 # two instances.  Usually, somewhere between 5 and 30 epochs is reasonable (NOTA DE MARISCO: tarda algunos minutos cada vuelta).
-data = get_data(TRAIN_DATA)
+instances, labels = get_data_splitted(TRAIN_DATA)
+instances, labels = get_tensor_data(instances, labels, word_to_ix, label_to_ix)
+
+def get_max_length(x):
+    return len(max(x, key=len))
+
+def pad_sequence(seq):
+    def _pad(_it, _max_len):
+        return [0] * (_max_len - len(_it)) + _it
+    return [_pad(it, get_max_length(seq)) for it in seq]
+
+def custom_collate(batch):
+    transposed = zip(*batch)
+    lst = []
+    for samples in transposed:
+        if isinstance(samples[0], int):
+            lst.append(torch.LongTensor(samples))
+        elif isinstance(samples[0], float):
+            lst.append(torch.DoubleTensor(samples))
+        elif isinstance(samples[0], list):
+            lst.append(torch.LongTensor(pad_sequence(samples)))
+    return lst
+
+tensor_data = CustomDataset(instances, labels)
+train_loader = DataLoader(dataset=tensor_data, batch_size=BATCH_SIZE, shuffle=False, collate_fn=custom_collate) #TODO shuffle?
 for epoch in range(3):
     running_loss = 0.0
     i = 0
-    for instance, label in data:
+    for instance_batch, label_batch in train_loader:
         # Step 1. Remember that Pytorch accumulates gradients.  We need to clear them out
         # before each instance
         model.zero_grad()
         model.hidden = model.init_hidden()
+        instance_batch = instance_batch.transpose(0,1)
 
         # Step 2. Make our BOW vector and also we must wrap the target in a Variable
         # as an integer.  For example, if the target is SPANISH, then we wrap the integer
         # 0.  The loss function then knows that the 0th element of the log probabilities is
         # the log probability corresponding to SPANISH
-        bow_vec = prepare_sequence(instance.split(), word_to_ix)
-        target = make_target(label, label_to_ix)
 
-        # Step 3. Run our forward pass.
-        log_probs = model(bow_vec)
+        # Step 3. Run our forward pass
+        log_probs = model(instance_batch)
 
         # Step 4. Compute the loss, gradients, and update the parameters by calling
         # optimizer.step()
-        loss = loss_function(log_probs, target)
+        loss = loss_function(log_probs, label_batch)
         loss.backward()
         optimizer.step()
         # print statistics
         i += 1
         running_loss += loss.item()
-        if i % 20000 == 19999:# print every 200000 mini-batches
-            print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 20000))
+        melixiTos = 100
+        if i % melixiTos == (melixiTos-1):# print every 200000 mini-batches
+            print('[%d, %5d] loss: %.3f' % (epoch + 1, (i + 1)*BATCH_SIZE, running_loss / (melixiTos)))
             running_loss = 0.0
 
 '''Predicción'''
-test_data = get_data(DEV_DATA)
+test_data = ed(DEV_DATA)
 counter = 0
 ok = 0
 for instance, label in test_data:
