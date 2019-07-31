@@ -134,7 +134,7 @@ def custom_collate(batch):
     return lst
 
 tensor_data = CustomDataset(instances, labels)
-train_loader = DataLoader(dataset=tensor_data, batch_size=BATCH_SIZE, shuffle=False, collate_fn=custom_collate) #TODO shuffle?
+train_loader = DataLoader(dataset=tensor_data, batch_size=BATCH_SIZE, shuffle=False, collate_fn=custom_collate, drop_last=True) #TODO shuffle? drop_last es una verga
 for epoch in range(EPOCH_SIZE):
     running_loss = 0.0
     i = 0
@@ -167,14 +167,18 @@ for epoch in range(EPOCH_SIZE):
             running_loss = 0.0
 
 '''Predicción'''
-test_data = ed(DEV_DATA)
+instances, labels = get_data_splitted(DEV_DATA)
+instances, labels = get_tensor_data(instances, labels, word_to_ix, label_to_ix)
+tensor_data = CustomDataset(instances, labels)
+train_loader = DataLoader(dataset=tensor_data, batch_size=BATCH_SIZE, shuffle=False, collate_fn=custom_collate, drop_last=True)
 counter = 0
 ok = 0
-for instance, label in test_data:
-    bow_vec = prepare_sequence(instance.split(), word_to_ix)
-    log_probs = model(bow_vec)
+for instance_batch, label_batch in train_loader:
+    instance_batch = instance_batch.transpose(0,1)
+    log_probs = model(instance_batch)
     _, predicted = torch.max(log_probs, 1)
-    if(get_label_by_item(predicted.item()) == label):
-        ok += 1
-    counter += 1
+    for instance,label in zip(predicted, label_batch):
+        if(instance.item() == label.item()):
+            ok += 1
+        counter += 1
 print("Resultado: {} ".format(((100*ok)/counter)/100))
