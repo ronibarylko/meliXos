@@ -86,6 +86,7 @@ NUM_LABELS = len(label_to_ix)
 EMBEDDING_DIM = 512
 HIDDEN_DIM = 264
 BATCH_SIZE = 200
+EPOCH_SIZE = 3
 
 # Creo mi modelo, defino la loss function, y la función de optimización
 model = LSTMClassifier(EMBEDDING_DIM, HIDDEN_DIM, VOCAB_SIZE, NUM_LABELS, BATCH_SIZE)
@@ -134,7 +135,7 @@ def custom_collate(batch):
 
 tensor_data = CustomDataset(instances, labels)
 train_loader = DataLoader(dataset=tensor_data, batch_size=BATCH_SIZE, shuffle=False, collate_fn=custom_collate) #TODO shuffle?
-for epoch in range(3):
+for epoch in range(EPOCH_SIZE):
     running_loss = 0.0
     i = 0
     for instance_batch, label_batch in train_loader:
