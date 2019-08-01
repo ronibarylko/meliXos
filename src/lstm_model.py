@@ -117,19 +117,27 @@ def prepare_sequence(seq, to_ix):
     idxs = list(map(lambda w: to_ix[w], seq))
     return idxs
 
-def get_tensor_data(data_inst, data_lab, word_to_ix, label_to_ix):
+def get_result_label(result, label_to_ix):
+    for label, number in label_to_ix.items():    # for name, age in dictionary.iteritems():  (for Python 2.x)
+        if result == number:
+            return label
+
+def get_tensor_data(data_inst, data_lab, word_to_ix, label_to_ix, use_labels=True):
     instances = []
     labels = []
     for instance, label in zip(data_inst, data_lab):
         instances.append(prepare_sequence(instance, word_to_ix))
-        labels.append(make_target(label, label_to_ix))
+        if(use_labels):
+            labels.append(make_target(label, label_to_ix))
+        else:
+            labels.append(0)
     return instances, labels
 
 '''Entrenamiento'''
 # Usually you want to pass over the training data several times.
 # 100 is much bigger than on a real data set, but real datasets have more than
 # two instances.  Usually, somewhere between 5 and 30 epochs is reasonable (NOTA DE MARISCO: tarda algunos minutos cada vuelta).
-instances, labels = get_data_splitted(TRAIN_DATA)
+instances, labels = get_data_splitted(DEV_DATA)
 instances, labels = get_tensor_data(instances, labels, word_to_ix, label_to_ix)
 
 def get_max_length(x):
@@ -207,9 +215,18 @@ if(args.function == 'test'):
     print("Resultado: {} ".format(((100*ok)/counter)/100))
 else:
     if(args.function == 'predict'):
-        instances_to_predict = get_instances_to_predict(TRAIN_SENTENCES, BATCH_SIZE)
-        for instance_batch in instances_to_predict:
-            log_probs = model(instance_batch)
-            _, predicted = torch.max(log_probs, 1)
+        with open('result.txt', 'w') as fout:
+            instances, labels = get_data_splitted(TEST_SENTENCES)
+            instances, labels = get_tensor_data(instances, labels, word_to_ix, label_to_ix, use_labels=False)
+            tensor_data = CustomDataset(instances, labels)
+            train_loader = DataLoader(dataset=tensor_data, batch_size=BATCH_SIZE, shuffle=False, collate_fn=custom_collate, drop_last=True)
+            for instance_batch, _ in train_loader:
+                instance_batch = instance_batch.transpose(0,1)
+                log_probs = model(instance_batch)
+                _, predicted = torch.max(log_probs, 1)
+                for label_prediction in predicted:
+                    fout.write(get_result_label(label_prediction, label_to_ix))
+                    fout.write('\n')
+                raise Exception('NO dropees mogolico')
     else:
         raise Exception('{} is not test or predict'.format(args.function))
