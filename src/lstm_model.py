@@ -96,6 +96,9 @@ def calculate_prediction_rate(predicted, label_batch, counter, ok):
         counter += 1
     return counter, ok
 
+def define_batch_size(batch_size):
+
+
 ''' Creación del modelo '''
 ### Defino la cantidad de palabras y la cantidad de labels
 label_to_ix = { "neutral": 0, "contradiction": 1, "entailment": 2 }
@@ -104,7 +107,8 @@ VOCAB_SIZE = len(word_to_ix)
 NUM_LABELS = len(label_to_ix)
 EMBEDDING_DIM = 300
 HIDDEN_DIM = 150
-BATCH_SIZE = 200
+BATCH_SIZE = define_batch_size(200) #Es la asquerosidad mas grande que hice, y eso que una vez me comi mi vomito
+print("Batch size is {}").format(BATCH_SIZE)
 EPOCH_SIZE = 5
 
 # Creo mi modelo, defino la loss function, y la función de optimización
