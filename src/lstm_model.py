@@ -77,21 +77,28 @@ def get_label_by_item(item):
             return label
     return None
 
+def calculate_prediction_rate(predicted, label_batch, counter, ok):
+    for instance,label in zip(predicted, label_batch):
+        if(instance.item() == label.item()):
+            ok += 1
+        counter += 1
+    return counter, ok
+
 ''' Creación del modelo '''
 ### Defino la cantidad de palabras y la cantidad de labels
 label_to_ix = { "neutral": 0, "contradiction": 1, "entailment": 2 }
 word_to_ix = create_map([DEV_SENTENCES, TRAIN_SENTENCES, TEST_SENTENCES])
 VOCAB_SIZE = len(word_to_ix)
 NUM_LABELS = len(label_to_ix)
-EMBEDDING_DIM = 512
-HIDDEN_DIM = 264
+EMBEDDING_DIM = 300
+HIDDEN_DIM = 150
 BATCH_SIZE = 200
-EPOCH_SIZE = 3
+EPOCH_SIZE = 2
 
 # Creo mi modelo, defino la loss function, y la función de optimización
 model = LSTMClassifier(EMBEDDING_DIM, HIDDEN_DIM, VOCAB_SIZE, NUM_LABELS, BATCH_SIZE)
 loss_function = nn.NLLLoss()
-optimizer = optim.SGD(model.parameters(), lr=0.1)
+optimizer = optim.SGD(model.parameters(), lr=1.0)
 
 # TODO mover esto de aca
 def prepare_sequence(seq, to_ix):
@@ -134,7 +141,9 @@ def custom_collate(batch):
     return lst
 
 tensor_data = CustomDataset(instances, labels)
-train_loader = DataLoader(dataset=tensor_data, batch_size=BATCH_SIZE, shuffle=False, collate_fn=custom_collate, drop_last=True) #TODO shuffle? drop_last es una verga
+train_loader = DataLoader(dataset=tensor_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=custom_collate, drop_last=True) #TODO shuffle? drop_last es una verga
+counter = 0
+ok = 0
 for epoch in range(EPOCH_SIZE):
     running_loss = 0.0
     i = 0
@@ -161,9 +170,13 @@ for epoch in range(EPOCH_SIZE):
         # print statistics
         i += 1
         running_loss += loss.item()
+        _, predicted = torch.max(log_probs, 1)
+        counter, ok = calculate_prediction_rate(predicted, label_batch, counter, ok)
         melixiTos = 100
         if i % melixiTos == (melixiTos-1):# print every 200000 mini-batches
-            print('[%d, %5d] loss: %.3f' % (epoch + 1, (i + 1)*BATCH_SIZE, running_loss / (melixiTos)))
+            print('[%d, %5d] loss: %.3f, predicted: %.3f' % (epoch + 1, (i + 1)*BATCH_SIZE, running_loss / (melixiTos), ((100*ok)/counter)/100))
+            counter = 0
+            ok = 0
             running_loss = 0.0
 
 '''Predicción'''
@@ -177,8 +190,5 @@ for instance_batch, label_batch in train_loader:
     instance_batch = instance_batch.transpose(0,1)
     log_probs = model(instance_batch)
     _, predicted = torch.max(log_probs, 1)
-    for instance,label in zip(predicted, label_batch):
-        if(instance.item() == label.item()):
-            ok += 1
-        counter += 1
+    counter, ok = calculate_prediction_rate(predicted, label_batch, counter, ok)
 print("Resultado: {} ".format(((100*ok)/counter)/100))
