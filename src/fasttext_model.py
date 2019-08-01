@@ -17,7 +17,7 @@ def train_and_predict():
     print(predict(model, args.test_data))
 
 def train(train_data):
-    return fasttext.train_supervised(train_data)
+    return fasttext.train_supervised(train_data, epoch=5, wordNgrams=2, verbose=2)
 
 def test(model, test_data):
     return model.test(test_data)

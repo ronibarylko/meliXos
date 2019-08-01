@@ -8,7 +8,7 @@ mv data.txt train.txt
 python3 reader.py eci2019nlp/snli_1.0_test_filtered.jsonl
 echo -e "${RED}Predict data parsed correctly${NOCOLOR}"
 mv data.txt predict.txt
-python3 fasttext.py train.txt predict.txt 'predict'
+python3 fasttext_model.py train.txt predict.txt 'predict'
 python3 generate_answer.py
 echo -e "${RED}Result was produced correctly${NOCOLOR}"
 rm *.txt
