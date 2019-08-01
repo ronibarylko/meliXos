@@ -3,10 +3,15 @@ import torch.autograd as autograd
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-import numpy as np
 from lstm_classifier import LSTMClassifier
 from torch.utils.data import DataLoader, TensorDataset
 from custom_dataset import CustomDataset
+import argparse
+
+ap = argparse.ArgumentParser()
+ap.add_argument('function')
+
+args = ap.parse_args()
 
 '''
 Modelo cheto, vamos por ti
@@ -30,6 +35,13 @@ def get_data_splitted(data):
             instances.append(get_sentence_splitted(line))
             labels.append(get_label(line))
     return instances, labels
+
+def get_instances_to_predict(file, batch_size):
+    sentences = []
+    with open(file, 'r') as infile:
+        for line in infile:
+            sentences.append(line)
+
 
 def get_label(line):
     return line.split()[0].replace('__label__', '')
@@ -93,7 +105,7 @@ NUM_LABELS = len(label_to_ix)
 EMBEDDING_DIM = 300
 HIDDEN_DIM = 150
 BATCH_SIZE = 200
-EPOCH_SIZE = 2
+EPOCH_SIZE = 5
 
 # Creo mi modelo, defino la loss function, y la función de optimización
 model = LSTMClassifier(EMBEDDING_DIM, HIDDEN_DIM, VOCAB_SIZE, NUM_LABELS, BATCH_SIZE)
@@ -180,15 +192,24 @@ for epoch in range(EPOCH_SIZE):
             running_loss = 0.0
 
 '''Predicción'''
-instances, labels = get_data_splitted(DEV_DATA)
-instances, labels = get_tensor_data(instances, labels, word_to_ix, label_to_ix)
-tensor_data = CustomDataset(instances, labels)
-train_loader = DataLoader(dataset=tensor_data, batch_size=BATCH_SIZE, shuffle=False, collate_fn=custom_collate, drop_last=True)
-counter = 0
-ok = 0
-for instance_batch, label_batch in train_loader:
-    instance_batch = instance_batch.transpose(0,1)
-    log_probs = model(instance_batch)
-    _, predicted = torch.max(log_probs, 1)
-    counter, ok = calculate_prediction_rate(predicted, label_batch, counter, ok)
-print("Resultado: {} ".format(((100*ok)/counter)/100))
+if(args.function == 'test'):
+    instances, labels = get_data_splitted(DEV_DATA)
+    instances, labels = get_tensor_data(instances, labels, word_to_ix, label_to_ix)
+    tensor_data = CustomDataset(instances, labels)
+    train_loader = DataLoader(dataset=tensor_data, batch_size=BATCH_SIZE, shuffle=False, collate_fn=custom_collate, drop_last=True)
+    counter = 0
+    ok = 0
+    for instance_batch, label_batch in train_loader:
+        instance_batch = instance_batch.transpose(0,1)
+        log_probs = model(instance_batch)
+        _, predicted = torch.max(log_probs, 1)
+        counter, ok = calculate_prediction_rate(predicted, label_batch, counter, ok)
+    print("Resultado: {} ".format(((100*ok)/counter)/100))
+else:
+    if(args.function == 'predict'):
+        instances_to_predict = get_instances_to_predict(TRAIN_SENTENCES, BATCH_SIZE)
+        for instance_batch in instances_to_predict:
+            log_probs = model(instance_batch)
+            _, predicted = torch.max(log_probs, 1)
+    else:
+        raise Exception('{} is not test or predict'.format(args.function))

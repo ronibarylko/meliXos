@@ -17,7 +17,7 @@ mv data.txt train_sentences.txt
 python3 reader.py eci2019nlp/snli_1.0_dev_filtered.jsonl
 echo -e "${RED}Dev sentences parsed correctly${NOCOLOR}"
 mv data.txt dev_sentences.txt
-python3 lstm_model.py 'predict'
+python3 lstm_model.py 'test'
 echo -e "${RED}Result was produced correctly${NOCOLOR}"
 rm *.txt
 echo -e "${RED}Temporary files removed${NOCOLOR}"
