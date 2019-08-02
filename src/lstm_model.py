@@ -36,13 +36,6 @@ def get_data_splitted(data):
             labels.append(get_label(line))
     return instances, labels
 
-def get_instances_to_predict(file, batch_size):
-    sentences = []
-    with open(file, 'r') as infile:
-        for line in infile:
-            sentences.append(line)
-
-
 def get_label(line):
     return line.split()[0].replace('__label__', '')
 
@@ -96,8 +89,14 @@ def calculate_prediction_rate(predicted, label_batch, counter, ok):
         counter += 1
     return counter, ok
 
-def define_batch_size(batch_size):
-
+def define_batch_size(batch_size, file):
+    size = 0
+    with open(file, 'r') as infile:
+        size = len(infile.readlines())
+    while True:
+        if(size % batch_size == 0):
+            return batch_size
+        batch_size = batch_size - 1
 
 ''' Creación del modelo '''
 ### Defino la cantidad de palabras y la cantidad de labels
@@ -107,14 +106,15 @@ VOCAB_SIZE = len(word_to_ix)
 NUM_LABELS = len(label_to_ix)
 EMBEDDING_DIM = 300
 HIDDEN_DIM = 150
-BATCH_SIZE = define_batch_size(200) #Es la asquerosidad mas grande que hice, y eso que una vez me comi mi vomito
-print("Batch size is {}").format(BATCH_SIZE)
+#BATCH_SIZE = define_batch_size(200, TEST_SENTENCES) #Es la asquerosidad mas grande que hice, y eso que una vez me comi mi vomito
+BATCH_SIZE = 100
+print("Batch size is {}".format(BATCH_SIZE))
 EPOCH_SIZE = 5
 
 # Creo mi modelo, defino la loss function, y la función de optimización
 model = LSTMClassifier(EMBEDDING_DIM, HIDDEN_DIM, VOCAB_SIZE, NUM_LABELS, BATCH_SIZE)
 loss_function = nn.NLLLoss()
-optimizer = optim.SGD(model.parameters(), lr=1.0)
+optimizer = optim.SGD(model.parameters(), lr=1)
 
 # TODO mover esto de aca
 def prepare_sequence(seq, to_ix):
@@ -124,7 +124,7 @@ def prepare_sequence(seq, to_ix):
 def get_result_label(result, label_to_ix):
     for label, number in label_to_ix.items():    # for name, age in dictionary.iteritems():  (for Python 2.x)
         if result == number:
-            return label
+            return "__label__"+label
 
 def get_tensor_data(data_inst, data_lab, word_to_ix, label_to_ix, use_labels=True):
     instances = []
@@ -141,8 +141,14 @@ def get_tensor_data(data_inst, data_lab, word_to_ix, label_to_ix, use_labels=Tru
 # Usually you want to pass over the training data several times.
 # 100 is much bigger than on a real data set, but real datasets have more than
 # two instances.  Usually, somewhere between 5 and 30 epochs is reasonable (NOTA DE MARISCO: tarda algunos minutos cada vuelta).
-instances, labels = get_data_splitted(DEV_DATA)
+instances, labels = get_data_splitted(TRAIN_DATA)
 instances, labels = get_tensor_data(instances, labels, word_to_ix, label_to_ix)
+print(len(instances))
+print(len(labels))
+instances = instances[0:30000]
+labels = labels[0:30000]
+print(len(instances))
+print(len(labels))
 
 def get_max_length(x):
     return len(max(x, key=len))
@@ -231,6 +237,5 @@ else:
                 for label_prediction in predicted:
                     fout.write(get_result_label(label_prediction, label_to_ix))
                     fout.write('\n')
-                raise Exception('NO dropees mogolico')
     else:
         raise Exception('{} is not test or predict'.format(args.function))
