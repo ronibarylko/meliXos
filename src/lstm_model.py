@@ -17,10 +17,11 @@ Primero y principal, consideremos que estoy armando de entrada el modelo para el
 #TODO estoy usando parentesis en python. soy tarado?
 ### Parametros y eso
 LOGGING = False
-EMBEDDING_DIM = 200
-HIDDEN_DIM = 100
-BATCH_SIZE = 100
+EMBEDDING_DIM = 100
+HIDDEN_DIM = 50
+BATCH_SIZE = 50
 EPOCH_SIZE = 5
+CLIP = 5
 LEARNING_RATE = 1
 DATA = 30000
 
@@ -226,6 +227,7 @@ for epoch in range(EPOCH_SIZE):
         # optimizer.step()
         loss = loss_function(log_probs, label_batch)
         loss.backward()
+        nn.utils.clip_grad_norm_(model.parameters(), CLIP) # Gradient clip to avoid exploding gradients
         optimizer.step()
         # print statistics
         i += 1
