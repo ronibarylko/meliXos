@@ -108,7 +108,7 @@ EMBEDDING_DIM = 300
 HIDDEN_DIM = 150
 #BATCH_SIZE = define_batch_size(200, TEST_SENTENCES) #Es la asquerosidad mas grande que hice, y eso que una vez me comi mi vomito
 BATCH_SIZE = 100
-print("Batch size is {}".format(BATCH_SIZE))
+print("Batch size for prediction is {}".format(BATCH_SIZE))
 EPOCH_SIZE = 5
 
 # Creo mi modelo, defino la loss function, y la función de optimización
@@ -143,12 +143,9 @@ def get_tensor_data(data_inst, data_lab, word_to_ix, label_to_ix, use_labels=Tru
 # two instances.  Usually, somewhere between 5 and 30 epochs is reasonable (NOTA DE MARISCO: tarda algunos minutos cada vuelta).
 instances, labels = get_data_splitted(TRAIN_DATA)
 instances, labels = get_tensor_data(instances, labels, word_to_ix, label_to_ix)
-print(len(instances))
-print(len(labels))
-instances = instances[0:30000]
-labels = labels[0:30000]
-print(len(instances))
-print(len(labels))
+
+instances = instances[0:3000]
+labels = labels[0:3000]
 
 def get_max_length(x):
     return len(max(x, key=len))
@@ -174,7 +171,7 @@ tensor_data = CustomDataset(instances, labels)
 train_loader = DataLoader(dataset=tensor_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=custom_collate, drop_last=True) #TODO shuffle? drop_last es una verga
 counter = 0
 ok = 0
-for epoch in range(EPOCH_SIZE):
+for epoch in range(1):
     running_loss = 0.0
     i = 0
     for instance_batch, label_batch in train_loader:
@@ -210,13 +207,17 @@ for epoch in range(EPOCH_SIZE):
             running_loss = 0.0
 
 '''Predicción'''
+BATCH_SIZE = define_batch_size(BATCH_SIZE, TEST_SENTENCES)
+print("Batch size for prediction is {}".format(BATCH_SIZE))
 if(args.function == 'test'):
     instances, labels = get_data_splitted(DEV_DATA)
     instances, labels = get_tensor_data(instances, labels, word_to_ix, label_to_ix)
     tensor_data = CustomDataset(instances, labels)
-    train_loader = DataLoader(dataset=tensor_data, batch_size=BATCH_SIZE, shuffle=False, collate_fn=custom_collate, drop_last=True)
+    train_loader = DataLoader(dataset=tensor_data, batch_size=BATCH_SIZE, shuffle=False, collate_fn=custom_collate)
     counter = 0
     ok = 0
+    model.batch_size = BATCH_SIZE
+    model.hidden = model.init_hidden()
     for instance_batch, label_batch in train_loader:
         instance_batch = instance_batch.transpose(0,1)
         log_probs = model(instance_batch)
@@ -229,7 +230,7 @@ else:
             instances, labels = get_data_splitted(TEST_SENTENCES)
             instances, labels = get_tensor_data(instances, labels, word_to_ix, label_to_ix, use_labels=False)
             tensor_data = CustomDataset(instances, labels)
-            train_loader = DataLoader(dataset=tensor_data, batch_size=BATCH_SIZE, shuffle=False, collate_fn=custom_collate, drop_last=True)
+            train_loader = DataLoader(dataset=tensor_data, batch_size=BATCH_SIZE, shuffle=False, collate_fn=custom_collate)
             for instance_batch, _ in train_loader:
                 instance_batch = instance_batch.transpose(0,1)
                 log_probs = model(instance_batch)
