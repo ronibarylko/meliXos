@@ -8,15 +8,46 @@ from torch.utils.data import DataLoader, TensorDataset
 from custom_dataset import CustomDataset
 import argparse
 
-ap = argparse.ArgumentParser()
-ap.add_argument('function')
-
-args = ap.parse_args()
-
 '''
 Modelo cheto, vamos por ti
 Primero y principal, consideremos que estoy armando de entrada el modelo para el BoW. Quizas después necesitamos distribuir en clases y bla. Ojala que no. Questo e Boca.
 '''
+
+#TODO estoy usando parentesis en python. soy tarado?
+### Parametros y eso
+LOGGING = False
+EMBEDDING_DIM = 300
+HIDDEN_DIM = 150
+BATCH_SIZE = 50
+EPOCH_SIZE = 5
+LEARNING_RATE = 1
+DATA = 30000
+
+ap = argparse.ArgumentParser()
+ap.add_argument('--function')
+ap.add_argument('--logging', nargs='?')
+ap.add_argument('--embedding', nargs='?')
+ap.add_argument('--hidden', nargs='?')
+ap.add_argument('--batch', nargs='?')
+ap.add_argument('--epoch', nargs='?')
+ap.add_argument('--learning', nargs='?')
+ap.add_argument('--data', nargs='?')
+
+args = ap.parse_args()
+if args.embedding:
+    EMBEDDING_DIM = int(args.embedding)
+if args.hidden:
+    HIDDEN_DIM = int(args.hidden)
+if args.batch:
+    BATCH_SIZE = int(args.batch)
+if args.epoch:
+    EPOCH_SIZE = int(args.epoch)
+if args.learning:
+    LEARNING_RATE = float(args.learning)
+if args.data:
+    DATA = int(args.data)
+if args.logging:
+    LOGGING = bool(args.logging)
 
 DEV_SENTENCES = "dev_sentences.txt"
 TRAIN_SENTENCES = "train_sentences.txt"
@@ -104,17 +135,11 @@ label_to_ix = { "neutral": 0, "contradiction": 1, "entailment": 2 }
 word_to_ix = create_map([DEV_SENTENCES, TRAIN_SENTENCES, TEST_SENTENCES])
 VOCAB_SIZE = len(word_to_ix)
 NUM_LABELS = len(label_to_ix)
-EMBEDDING_DIM = 300
-HIDDEN_DIM = 150
-#BATCH_SIZE = define_batch_size(200, TEST_SENTENCES) #Es la asquerosidad mas grande que hice, y eso que una vez me comi mi vomito
-BATCH_SIZE = 100
-print("Batch size for prediction is {}".format(BATCH_SIZE))
-EPOCH_SIZE = 5
 
 # Creo mi modelo, defino la loss function, y la función de optimización
 model = LSTMClassifier(EMBEDDING_DIM, HIDDEN_DIM, VOCAB_SIZE, NUM_LABELS, BATCH_SIZE)
 loss_function = nn.NLLLoss()
-optimizer = optim.SGD(model.parameters(), lr=1)
+optimizer = optim.SGD(model.parameters(), lr=LEARNING_RATE)
 
 # TODO mover esto de aca
 def prepare_sequence(seq, to_ix):
@@ -144,8 +169,8 @@ def get_tensor_data(data_inst, data_lab, word_to_ix, label_to_ix, use_labels=Tru
 instances, labels = get_data_splitted(TRAIN_DATA)
 instances, labels = get_tensor_data(instances, labels, word_to_ix, label_to_ix)
 
-instances = instances[0:3000]
-labels = labels[0:3000]
+instances = instances[0:DATA]
+labels = labels[0:DATA]
 
 def get_max_length(x):
     return len(max(x, key=len))
@@ -168,10 +193,10 @@ def custom_collate(batch):
     return lst
 
 tensor_data = CustomDataset(instances, labels)
-train_loader = DataLoader(dataset=tensor_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=custom_collate, drop_last=True) #TODO shuffle? drop_last es una verga
+train_loader = DataLoader(dataset=tensor_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=custom_collate, drop_last=True) #TODO shuffle?
 counter = 0
 ok = 0
-for epoch in range(1):
+for epoch in range(EPOCH_SIZE):
     running_loss = 0.0
     i = 0
     for instance_batch, label_batch in train_loader:
@@ -200,16 +225,15 @@ for epoch in range(1):
         _, predicted = torch.max(log_probs, 1)
         counter, ok = calculate_prediction_rate(predicted, label_batch, counter, ok)
         melixiTos = 100
-        if i % melixiTos == (melixiTos-1):# print every 200000 mini-batches
+        if i % melixiTos == (melixiTos-1) and LOGGING :# print every 200000 mini-batches
             print('[%d, %5d] loss: %.3f, predicted: %.3f' % (epoch + 1, (i + 1)*BATCH_SIZE, running_loss / (melixiTos), ((100*ok)/counter)/100))
             counter = 0
             ok = 0
             running_loss = 0.0
 
 '''Predicción'''
-BATCH_SIZE = define_batch_size(BATCH_SIZE, TEST_SENTENCES)
-print("Batch size for prediction is {}".format(BATCH_SIZE))
 if(args.function == 'test'):
+    BATCH_SIZE = define_batch_size(BATCH_SIZE, DEV_SENTENCES)
     instances, labels = get_data_splitted(DEV_DATA)
     instances, labels = get_tensor_data(instances, labels, word_to_ix, label_to_ix)
     tensor_data = CustomDataset(instances, labels)
@@ -223,9 +247,13 @@ if(args.function == 'test'):
         log_probs = model(instance_batch)
         _, predicted = torch.max(log_probs, 1)
         counter, ok = calculate_prediction_rate(predicted, label_batch, counter, ok)
-    print("Resultado: {} ".format(((100*ok)/counter)/100))
+    if LOGGING:
+        print("Resultado: {} ".format(((100*ok)/counter)/100))
+    else:
+        print(((100*ok)/counter)/100)
 else:
     if(args.function == 'predict'):
+        BATCH_SIZE = define_batch_size(BATCH_SIZE, TEST_SENTENCES)
         with open('result.txt', 'w') as fout:
             instances, labels = get_data_splitted(TEST_SENTENCES)
             instances, labels = get_tensor_data(instances, labels, word_to_ix, label_to_ix, use_labels=False)
