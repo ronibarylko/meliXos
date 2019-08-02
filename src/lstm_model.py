@@ -7,6 +7,7 @@ from lstm_classifier import LSTMClassifier
 from torch.utils.data import DataLoader, TensorDataset
 from custom_dataset import CustomDataset
 import argparse
+from string import punctuation
 
 '''
 Modelo cheto, vamos por ti
@@ -16,9 +17,9 @@ Primero y principal, consideremos que estoy armando de entrada el modelo para el
 #TODO estoy usando parentesis en python. soy tarado?
 ### Parametros y eso
 LOGGING = False
-EMBEDDING_DIM = 300
-HIDDEN_DIM = 150
-BATCH_SIZE = 50
+EMBEDDING_DIM = 200
+HIDDEN_DIM = 100
+BATCH_SIZE = 100
 EPOCH_SIZE = 5
 LEARNING_RATE = 1
 DATA = 30000
@@ -57,13 +58,19 @@ DEV_DATA = "dev_data.txt"
 TRAIN_DATA = "train_data.txt"
 
 '''Funciones'''
+def get_lower_line_without_punctuation(line):
+    lower_line = line.lower()
+    return ''.join([c for c in lower_line if c not in punctuation])
+
+
 # Función que levanta el archivo data y lo transforma en una lista de (sentence, label)
 def get_data_splitted(data):
     instances = []
     labels = []
     with open(data, 'r') as sentences:
         for line in sentences:
-            instances.append(get_sentence_splitted(line))
+            processed_line = get_lower_line_without_punctuation(line)
+            instances.append(get_sentence_splitted(processed_line))
             labels.append(get_label(line))
     return instances, labels
 
@@ -92,7 +99,8 @@ def create_map(txt_list):
         with open(input_file, 'r') as infile:
             sentences = []
             for line in infile:
-                sentences.append(line)
+                processed_line = get_lower_line_without_punctuation(line)
+                sentences.append(processed_line)
             word_to_ix = add_words_to_map(sentences, word_to_ix)
     return word_to_ix
 
