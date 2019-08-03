@@ -5,11 +5,12 @@ import torch.autograd as autograd
 
 class LSTMClassifier(nn.Module):
 
-    def __init__(self, embedding_dim, hidden_dim, vocab_size, num_labels, batch_size, dropout=0.5):
+    def __init__(self, embedding_dim, hidden_dim, vocab_size, num_labels, batch_size, dropout=0.5, num_layers=2):
         super(LSTMClassifier, self).__init__()
         self.hidden_dim = hidden_dim
         self.word_embeddings = nn.Embedding(vocab_size, embedding_dim)
-        self.num_layers = 2
+        self.dropout = dropout
+        self.num_layers = num_layers
         # The LSTM takes word embeddings as inputs, and outputs hidden states
         # with dimensionality hidden_dim.
         self.lstm = nn.LSTM(input_size=embedding_dim, hidden_size=hidden_dim, bidirectional=True, dropout=dropout, num_layers=self.num_layers) #TODO aca le podemos meter layers, dropout, batch_first
