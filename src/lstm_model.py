@@ -17,9 +17,9 @@ Primero y principal, consideremos que estoy armando de entrada el modelo para el
 #TODO estoy usando parentesis en python. soy tarado?
 ### Parametros y eso
 LOGGING = False
-EMBEDDING_DIM = 100
-HIDDEN_DIM = 50
-BATCH_SIZE = 50
+EMBEDDING_DIM = 400
+HIDDEN_DIM = 200
+BATCH_SIZE = 2000
 EPOCH_SIZE = 5
 CLIP = 5
 LEARNING_RATE = 1
@@ -178,8 +178,9 @@ def get_tensor_data(data_inst, data_lab, word_to_ix, label_to_ix, use_labels=Tru
 instances, labels = get_data_splitted(TRAIN_DATA)
 instances, labels = get_tensor_data(instances, labels, word_to_ix, label_to_ix)
 
-instances = instances[0:DATA]
-labels = labels[0:DATA]
+if(args.function == 'test'):
+    instances = instances[0:DATA]
+    labels = labels[0:DATA]
 
 def get_max_length(x):
     return len(max(x, key=len))
@@ -205,9 +206,32 @@ tensor_data = CustomDataset(instances, labels)
 train_loader = DataLoader(dataset=tensor_data, batch_size=BATCH_SIZE, shuffle=True, collate_fn=custom_collate, drop_last=True) #TODO shuffle?
 counter = 0
 ok = 0
+
+DEV_BATCH_SIZE = define_batch_size(BATCH_SIZE, DEV_SENTENCES)
+dev_instances, dev_labels = get_data_splitted(DEV_DATA)
+dev_instances, dev_labels = get_tensor_data(dev_instances, dev_labels, word_to_ix, label_to_ix)
+dev_tensor_data = CustomDataset(dev_instances, dev_labels)
+dev_train_loader = DataLoader(dataset=dev_tensor_data, batch_size=DEV_BATCH_SIZE, shuffle=False, collate_fn=custom_collate)
+
+def predict(model, train_loader, batch_size):
+    ex_batch_size = model.batch_size
+    model.batch_size = batch_size
+    model.hidden = model.init_hidden()
+    counter = 0
+    ok = 0
+    for instance_batch, label_batch in train_loader:
+        instance_batch = instance_batch.transpose(0,1)
+        log_probs = model(instance_batch)
+        _, predicted = torch.max(log_probs, 1)
+        counter, ok = calculate_prediction_rate(predicted, label_batch, counter, ok)
+    if LOGGING:
+        print("Resultado: {} ".format(((100*ok)/counter)/100))
+    model.batch_size = ex_batch_size
+
 for epoch in range(EPOCH_SIZE):
     running_loss = 0.0
     i = 0
+    predict(model, dev_train_loader, DEV_BATCH_SIZE)
     for instance_batch, label_batch in train_loader:
         # Step 1. Remember that Pytorch accumulates gradients.  We need to clear them out
         # before each instance
@@ -269,6 +293,8 @@ else:
             instances, labels = get_tensor_data(instances, labels, word_to_ix, label_to_ix, use_labels=False)
             tensor_data = CustomDataset(instances, labels)
             train_loader = DataLoader(dataset=tensor_data, batch_size=BATCH_SIZE, shuffle=False, collate_fn=custom_collate)
+            model.batch_size = BATCH_SIZE
+            model.hidden = model.init_hidden()
             for instance_batch, _ in train_loader:
                 instance_batch = instance_batch.transpose(0,1)
                 log_probs = model(instance_batch)
