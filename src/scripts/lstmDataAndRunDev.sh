@@ -19,5 +19,4 @@ echo -e "${RED}Dev sentences parsed correctly${NOCOLOR}"
 mv data.txt dev_sentences.txt
 python3 lstm_model.py --function 'test' --logging True --epoch 40
 echo -e "${RED}Result was produced correctly${NOCOLOR}"
-rm *.txt
 echo -e "${RED}Temporary files removed${NOCOLOR}"
