@@ -16,7 +16,7 @@ Primero y principal, consideremos que estoy armando de entrada el modelo para el
 
 #TODO estoy usando parentesis en python. soy tarado?
 ### Parametros y eso
-LOGGING = False
+LOGGING = True
 EMBEDDING_DIM = 400
 HIDDEN_DIM = 200
 BATCH_SIZE = 2000
@@ -24,6 +24,7 @@ EPOCH_SIZE = 5
 CLIP = 5
 LEARNING_RATE = 1
 DATA = 30000
+LAYERS = 2
 
 ap = argparse.ArgumentParser()
 ap.add_argument('--function')
@@ -34,6 +35,7 @@ ap.add_argument('--batch', nargs='?')
 ap.add_argument('--epoch', nargs='?')
 ap.add_argument('--learning', nargs='?')
 ap.add_argument('--data', nargs='?')
+ap.add_argument('--layers', nargs='?')
 
 args = ap.parse_args()
 if args.embedding:
@@ -50,6 +52,8 @@ if args.data:
     DATA = int(args.data)
 if args.logging:
     LOGGING = bool(args.logging)
+if args.layers:
+    LAYERS = int(args.layers)
 
 DEV_SENTENCES = "dev_sentences.txt"
 TRAIN_SENTENCES = "train_sentences.txt"
@@ -178,10 +182,6 @@ def get_tensor_data(data_inst, data_lab, word_to_ix, label_to_ix, use_labels=Tru
 instances, labels = get_data_splitted(TRAIN_DATA)
 instances, labels = get_tensor_data(instances, labels, word_to_ix, label_to_ix)
 
-if(args.function == 'test'):
-    instances = instances[0:DATA]
-    labels = labels[0:DATA]
-
 def get_max_length(x):
     return len(max(x, key=len))
 
@@ -231,7 +231,9 @@ def predict(model, train_loader, batch_size):
 for epoch in range(EPOCH_SIZE):
     running_loss = 0.0
     i = 0
+    MODEL_PATH = 'models/model_embedd_{}_hidden_{}_epoch_{}_batch_{}_lr_{}'.format(EMBEDDING_DIM, HIDDEN_DIM, epoch, BATCH_SIZE, LEARNING_RATE)
     predict(model, dev_train_loader, DEV_BATCH_SIZE)
+    torch.save(model, MODEL_PATH)
     for instance_batch, label_batch in train_loader:
         # Step 1. Remember that Pytorch accumulates gradients.  We need to clear them out
         # before each instance
